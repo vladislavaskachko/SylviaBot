@@ -20,7 +20,7 @@ namespace SylviaBot
         public static List<string> reactions = new List<string>();
         static void Main(string[] args)
         {
-            var client = new TelegramBotClient("6111728145:AAEHa18U_3OJ3W2y9I__OLF2skY5kWRT6ck");
+            var client = new TelegramBotClient(".....");
             var person = client.GetMeAsync().Result;
             client.StartReceiving(HandleUpdate, HandleError);
             Console.ReadLine();
