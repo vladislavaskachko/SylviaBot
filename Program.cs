@@ -3,8 +3,10 @@ using Telegram.Bot;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.ReplyMarkups;
+using DocumentFormat.OpenXml;
+using DocumentFormat.OpenXml.Packaging;
+using DocumentFormat.OpenXml.Wordprocessing;
 using System.IO;
-using NPOI.XWPF.UserModel;
 
 
 
@@ -12,22 +14,10 @@ namespace SylviaBot
 {
     internal class Program
     {
-        public static List<Info> reportInfo = new List<Info>();
-        static string? situation;
-        static string? thought;
-        static string? emotion;
-        static string? reaction;
-        private static string GenerateReport()
-        {
-            string report = "Дата и время\tСитуация\tМысли\tЭмоции\tРеакция\n";
-            foreach (var inf in reportInfo)
-            {
-                string time = inf.Date.ToString("MM-dd HH:mm");
-                report += $"{time}\t{inf.Situation}\t{inf.Thought}\t{inf.Emotion}\t{inf.Reaction}\n";
-            }
-
-            return report;
-        }
+        public static List<string> situations = new List<string>();
+        public static List<string> thoughts = new List<string>();
+        public static List<string> emotions = new List<string>();
+        public static List<string> reactions = new List<string>();
         static void Main(string[] args)
         {
             var client = new TelegramBotClient("6111728145:AAEHa18U_3OJ3W2y9I__OLF2skY5kWRT6ck");
@@ -35,20 +25,46 @@ namespace SylviaBot
             client.StartReceiving(HandleUpdate, HandleError);
             Console.ReadLine();
         }
-
         private static Task HandleError(ITelegramBotClient arg1, Exception arg2, CancellationToken arg3)
         {
             throw new NotImplementedException();
         }
+        private static InlineKeyboardMarkup Menu()
+        {
+            var keyboard = new[]
+            {
+        new []
+        {
+            InlineKeyboardButton.WithCallbackData("Ситуация"),
+            InlineKeyboardButton.WithCallbackData("Мысли")
+        },
+        new []
+        {
+            InlineKeyboardButton.WithCallbackData("Эмоции"),
+            InlineKeyboardButton.WithCallbackData("Реакция")
+        },
+        new []
+        {
+            InlineKeyboardButton.WithCallbackData("Отчет")
+        },
+        new []
+        {
+            InlineKeyboardButton.WithCallbackData("Помощь")
+        },
+            };
+
+            return new InlineKeyboardMarkup(keyboard);
+        }
+
 
         async static Task HandleUpdate(ITelegramBotClient client, Update update, CancellationToken token)
         {
-
             var message = update.Message;
             if (message == null)
             {
                 return;
             }
+
             if (message.Text != null)
             {
                 if (message.Text.Contains("/start"))
@@ -57,175 +73,103 @@ namespace SylviaBot
                     {
                 new[]
                 {
-                    new KeyboardButton("Ситуация"),
-                    new KeyboardButton("Мысли"),
+                    new KeyboardButton("Заполнить дневник"),
                 },
-                new[]
-                {
-                    new KeyboardButton("Эмоции"),
-                    new KeyboardButton("Реакция")
-                },
-                new[]
-                {
-                    new KeyboardButton("Отчет")
-                },
-                new[]
-                {
-                    new KeyboardButton("Помощь")
-                }
             });
                     keyboard.ResizeKeyboard = true;
-                    await client.SendTextMessageAsync(message.Chat.Id, "Меня зовут Сильвия! Я бот, основанный на протоколе СМЭР. Я буду помогать Вам отслеживать информацию о Ваших эмоциях и автоматических мыслях", replyMarkup: keyboard);
+                    await client.SendTextMessageAsync(message.Chat.Id, "Меня зовут Сильвия! Я бот, основанный на протоколе СМЭР. Я буду помогать Вам отслеживать информацию о Ваших эмоциях и автоматических мыслях. Каждый раз, когда Вы хотите рассказать мне о том, как Ваши дела, нажимайте кнопку 'Заполнить дневник'", replyMarkup: keyboard);
                 }
+                else if (message.Text == "Заполнить дневник")
                 {
-                    var chatId = message.Chat.Id;
-                    if (message.Type == MessageType.Text)
-                    {
-
-                        switch (message.Text)
-                        {
-
-                            case "Ситуация":
-                                {
-                                   
-                                    await client.SendTextMessageAsync(chatId, "Расскажите о том, что произошло:");
-                                    situation = null;
-                                    while (true)
-                                    {
-                                        var updates = await client.GetUpdatesAsync();
-                                        var newMessage = updates.LastOrDefault()?.Message;
-                                        if (newMessage == null)
-                                        {
-                                            continue;
-                                        }
-                                        if (newMessage.Text != null)
-                                        {
-                                            situation = newMessage.Text;
-                                            break;
-                                        }
-                                        if (newMessage.Photo != null)
-                                        {
-                                            await client.SendTextMessageAsync(chatId, "Жаль, что я не умеею работать с фотографиями");
-                                            return;
-                                        }
-                                    }
-                                    break;
-                                }
-                            case "Мысли":
-                                {
-                                    await client.SendTextMessageAsync(chatId, "Расскажите, о чем Вы думаете");
-                                    thought = null;
-                                    while (true)
-                                    {
-                                        var updates = await client.GetUpdatesAsync();
-                                        var newMessage = updates.LastOrDefault()?.Message;
-                                        if (newMessage == null)
-                                        {
-                                            continue;
-                                        }
-                                        if (newMessage.Text != null)
-                                        {
-                                            thought = newMessage.Text;
-                                            break;
-                                        }
-                                        if (newMessage.Photo != null)
-                                        {
-                                            await client.SendTextMessageAsync(chatId, "Жаль, что я не умеею работать с фотографиями");
-                                            return;
-                                        }
-                                    }
-                                    break;
-                                }
-                            case "Эмоции":
-                                {
-                                    await client.SendTextMessageAsync(chatId, "Расскажите, что вы чувствуете:");
-                                    emotion = null;
-                                    while (true)
-                                    {
-                                        var updates = await client.GetUpdatesAsync();
-                                        var newMessage = updates.LastOrDefault()?.Message;
-                                        if (newMessage == null)
-                                        {
-                                            continue;
-                                        }
-                                        if (newMessage.Text != null)
-                                        {
-                                            emotion = newMessage.Text;
-                                            break;
-                                        }
-                                        if (newMessage.Photo != null)
-                                        {
-                                            await client.SendTextMessageAsync(chatId, "Жаль, что я не умеею работать с фотографиями");
-                                            return;
-                                        }
-                                    }
-                                    break;
-                                }
-                            case "Реакция":
-                                {
-                                    await client.SendTextMessageAsync(chatId, "Расскажите, как Вы отреагировали на произошедшее:");
-                                    reaction = null;
-                                    while (true)
-                                    {
-                                        var updates = await client.GetUpdatesAsync();
-                                        var newMessage = updates.LastOrDefault()?.Message;
-                                        if (newMessage == null)
-                                        {
-                                            continue;
-                                        }
-                                        if (newMessage.Text != null)
-                                        {
-                                            reaction = newMessage.Text;
-                                            break;
-                                        }
-                                        if (newMessage.Photo != null)
-                                        {
-                                            await client.SendTextMessageAsync(chatId, "Жаль, что я не умеею работать с фотографиями");
-                                            return;
-                                        }
-                                    }
-                                    break;
-                                }
-                            case "Отчет":
-                                {
-                                    if (reportInfo.Count > 0)
-                                    {
-                                        string report = GenerateReport();
-                                        await client.SendTextMessageAsync(chatId, report);
-                                    }
-                                    else
-                                    {
-                                        await client.SendTextMessageAsync(chatId, "Вы не сделали ни одной записи. Я не могу составить пустой отчет");
-                                    }
-                                }
-                                break;
-                        }
-                        reportInfo.Clear();
-                    }
-                    var inf = new Info()
-                    {
-                        Date = DateTime.Now,
-                        Situation = situation,
-                        Thought = thought,
-                        Emotion = emotion,
-                        Reaction = reaction
-                    };
-                    reportInfo.Add(inf);
-                }
-                if (message.Photo != null)
-                {
-                    await client.SendTextMessageAsync(message.Chat.Id, "Жаль, что я не умеею работать с фотографиями");
-                    return;
+                    var menu = Menu();
+                    await client.SendTextMessageAsync(message.Chat.Id, "Здесь Вы можете записать всю информацию, а я сформирую из нее отчет", replyMarkup: menu);
                 }
             }
-
-            static Task HandleError(ITelegramBotClient client, Exception exception, CancellationToken cancellationToken)
+            else if (message.Type == MessageType.Photo)
             {
-                Console.WriteLine(exception);
-                return Task.CompletedTask;
+                await client.SendTextMessageAsync(message.Chat.Id, "Жаль, что я не умеею работать с фотографиями");
+                return;
+            }
+            else if (update.CallbackQuery != null)
+            {
+                await HandleCallbackQuery(update.CallbackQuery, client, update);
             }
         }
-    }
+
+        async static Task HandleCallbackQuery(CallbackQuery callbackQuery, ITelegramBotClient client, Update update)
+        {
+            if (callbackQuery == null)
+            {
+                return;
+            }
+            var chatId = callbackQuery.Message.Chat.Id;
+            var messageId = callbackQuery.Message.MessageId;
+            var button = callbackQuery.Data;
+            if (button == "Ситуация")
+            {
+                await client.SendTextMessageAsync(chatId, "Расскажите, что случилось");
+                var message = update.Message;
+                if (message != null && message.Text != null)
+                {
+                    situations.Add(message.Text);
+                }
+                else if (message != null && message.Photo != null)
+                {
+                    await client.SendTextMessageAsync(message.Chat.Id, "Жаль, что я не умеею работать с фотографиями");
+                }
+            }
+            else if (button == "Мысли")
+            {
+                await client.SendTextMessageAsync(chatId, "Какие мысли у Вас возникли?");
+                var message = update.Message;
+                if (message != null && message.Text != null)
+                {
+                    thoughts.Add(message.Text);
+                }
+                else if (message != null && message.Photo != null)
+                {
+                    await client.SendTextMessageAsync(message.Chat.Id, "Жаль, что я не умеею работать с фотографиями");
+                }
+            }
+            else if (button == "Эмоции")
+            {
+                await client.SendTextMessageAsync(chatId, "Что Вы чувствуете?");
+                var message = update.Message;
+                if (message != null && message.Text != null)
+                {
+                    emotions.Add(message.Text);
+                }
+                else if (message != null && message.Photo != null)
+                {
+                    await client.SendTextMessageAsync(message.Chat.Id, "Жаль, что я не умеею работать с фотографиями");
+                }
+            }
+            else if (button == "Реакция")
+            {
+                await client.SendTextMessageAsync(chatId, "Как Вы отреагировали?");
+                var message = update.Message;
+                if (message != null && message.Text != null)
+                {
+                    reactions.Add(message.Text);
+                }
+                else if (message != null && message.Photo != null)
+                {
+                    await client.SendTextMessageAsync(message.Chat.Id, "Жаль, что я не умеею работать с фотографиями");
+                }
+            }
+        }
+
+
+
+
 }
-    
+    }
+
+
+
+
+
+
+
+
 
